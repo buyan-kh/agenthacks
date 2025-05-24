@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Create Knowde Icons</title>
+  </head>
+  <body>
+    <h1>Knowde Icon Generator</h1>
+    <p>Click the buttons below to download the icons:</p>
+
+    <button onclick="createIcon(16)">Download 16x16</button>
+    <button onclick="createIcon(32)">Download 32x32</button>
+    <button onclick="createIcon(48)">Download 48x48</button>
+    <button onclick="createIcon(128)">Download 128x128</button>
+
+    <canvas id="canvas" style="display: none"></canvas>
+
+    <script>
+      function createIcon(size) {
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = size;
+        canvas.height = size;
+
+        // Create gradient background
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, "#404BD9");
+        gradient.addColorStop(1, "#60C2DA");
+
+        // Draw rounded rectangle background
+        const radius = size * 0.2;
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.roundRect(0, 0, size, size, radius);
+        ctx.fill();
+
+        // Draw brain icon
+        ctx.fillStyle = "white";
+        const centerX = size / 2;
+        const centerY = size / 2;
+        const iconSize = size * 0.6;
+
+        // Simple brain representation
+        ctx.beginPath();
+        ctx.arc(
+          centerX,
+          centerY - iconSize * 0.1,
+          iconSize * 0.3,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        // Add some brain-like details
+        ctx.beginPath();
+        ctx.arc(
+          centerX - iconSize * 0.15,
+          centerY + iconSize * 0.1,
+          iconSize * 0.15,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(
+          centerX + iconSize * 0.15,
+          centerY + iconSize * 0.1,
+          iconSize * 0.15,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        // Download the image
+        canvas.toBlob(function (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `icon${size}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      }
+    </script>
+  </body>
+</html>
