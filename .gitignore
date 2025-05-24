@@ -1,3 +1,57 @@
+# Dependencies
 ./knowde-extension/node_modules
 ./knowde-webapp/node_modules
-./backend/agenthacks-tutor-firebase-adminsdk-fbsvc-ff5afff970.json
+./backend/node_modules
+**/node_modules/
+
+# Environment variables and API keys
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+**/.env
+**/.env.local
+**/.env.development
+**/.env.test
+**/.env.production
+
+# Firebase credentials
+./backend/agenthacks-knowde-firebase-adminsdk-fbsvc-350c0720ca.json
+**/firebase-adminsdk-*.json
+
+# API configuration files with secrets
+**/config/api-secrets.ts
+**/config/api-secrets.js
+
+# Build outputs
+**/dist/
+**/build/
+**/dist-simple/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
