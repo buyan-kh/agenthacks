@@ -23,4 +23,11 @@
   .input-field {
     @apply w-full px-3 py-2 border border-kn-cloud rounded-lg focus:outline-none focus:ring-2 focus:ring-kn-sapphire focus:border-transparent;
   }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }

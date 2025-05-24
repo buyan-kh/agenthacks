@@ -1,1 +1,277 @@
-!function(){const e=new class{constructor(){this.isActive=!1,this.highlightColor="#404BD9",this.handleTextSelection=()=>{const e=window.getSelection(),t=e?.toString().trim();t&&t.length>10&&this.showQuickActionTooltip(t)},this.init()}async init(){try{((await chrome.storage.local.get(["settings"])).settings||{}).autoCapture&&this.startAnalysis()}catch(e){console.error("Error initializing content script:",e)}chrome.runtime.onMessage.addListener(((e,t,n)=>(this.handleMessage(e,t,n),!0))),document.addEventListener("keydown",(e=>{e.altKey&&"k"===e.key&&(e.preventDefault(),this.toggleLearningMode())}))}handleMessage(e,t,n){switch(e.type){case"ANALYZE_PAGE":this.analyzePage().then(n);break;case"TOGGLE_LEARNING_MODE":this.toggleLearningMode(),n({success:!0});break;case"CAPTURE_SELECTION":this.captureSelection().then(n);break;default:n({error:"Unknown message type"})}}async analyzePage(){const e={title:document.title,url:window.location.href,content:this.extractTextContent(),timestamp:Date.now()};try{await chrome.runtime.sendMessage({type:"PAGE_ANALYZED",data:e})}catch(e){console.error("Error sending page data:",e)}return e}extractTextContent(){const e=[];return["p","h1","h2","h3","h4","h5","h6","li","article","section"].forEach((t=>{document.querySelectorAll(t).forEach((t=>{const n=t.textContent?.trim();n&&n.length>10&&e.push(n)}))})),e.join(" ").substring(0,5e3)}async captureSelection(){const e=window.getSelection(),t=e?.toString().trim();if(!t)return{text:"",success:!1};this.highlightSelectedText(e);try{const e=(await chrome.storage.local.get(["highlights"])).highlights||[],n={id:Date.now().toString(),text:t,url:window.location.href,title:document.title,timestamp:Date.now()};return e.push(n),await chrome.storage.local.set({highlights:e}),chrome.runtime.sendMessage({type:"TEXT_CAPTURED",highlight:n}),{text:t,success:!0}}catch(e){return console.error("Error capturing selection:",e),{text:t,success:!1}}}highlightSelectedText(e){if(!e||0===e.rangeCount)return;const t=e.getRangeAt(0),n=document.createElement("span");n.style.backgroundColor=this.highlightColor,n.style.color="white",n.style.padding="2px 4px",n.style.borderRadius="3px",n.style.fontWeight="bold",n.className="knowde-highlight";try{t.surroundContents(n)}catch(e){console.log("Could not highlight complex selection")}}toggleLearningMode(){this.isActive=!this.isActive,this.isActive?this.activateLearningMode():this.deactivateLearningMode()}activateLearningMode(){const e=document.createElement("div");e.id="knowde-learning-indicator",e.innerHTML="\n      <div style=\"\n        position: fixed;\n        top: 20px;\n        right: 20px;\n        background: linear-gradient(135deg, #404BD9, #60C2DA);\n        color: white;\n        padding: 8px 16px;\n        border-radius: 20px;\n        font-family: 'Inter', sans-serif;\n        font-size: 14px;\n        font-weight: 500;\n        z-index: 10000;\n        box-shadow: 0 4px 12px rgba(64, 75, 217, 0.3);\n      \">\n        🧠 Learning Mode Active\n      </div>\n    ",document.body.appendChild(e),document.addEventListener("mouseup",this.handleTextSelection)}deactivateLearningMode(){const e=document.getElementById("knowde-learning-indicator");e&&e.remove(),document.removeEventListener("mouseup",this.handleTextSelection)}showQuickActionTooltip(e){const t=document.getElementById("knowde-tooltip");t&&t.remove();const n=document.createElement("div");n.id="knowde-tooltip",n.innerHTML='\n      <div style="\n        position: absolute;\n        background: white;\n        border: 1px solid #E5E3E6;\n        border-radius: 8px;\n        padding: 8px;\n        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);\n        z-index: 10001;\n        font-family: \'Inter\', sans-serif;\n        font-size: 12px;\n      ">\n        <button id="knowde-learn-more" style="\n          background: #404BD9;\n          color: white;\n          border: none;\n          padding: 4px 8px;\n          border-radius: 4px;\n          cursor: pointer;\n          font-size: 12px;\n        ">\n          Learn More 🧠\n        </button>\n      </div>\n    ';const o=window.getSelection();if(o&&o.rangeCount>0){const e=o.getRangeAt(0).getBoundingClientRect();n.style.left=`${e.left+window.scrollX}px`,n.style.top=`${e.bottom+window.scrollY+5}px`}document.body.appendChild(n);const i=document.getElementById("knowde-learn-more");i&&i.addEventListener("click",(()=>{this.captureSelection(),n.remove()})),setTimeout((()=>{n.parentNode&&n.remove()}),5e3)}startAnalysis(){this.analyzePage(),setInterval((()=>{this.isActive&&this.analyzePage()}),3e4)}};window.knowdeAnalyzer=e}();
+/******/ (function() { // webpackBootstrap
+/*!********************************!*\
+  !*** ./src/content/content.ts ***!
+  \********************************/
+// Content script for Knowde extension
+// Analyzes page content and provides learning opportunities
+class KnowdeContentAnalyzer {
+    constructor() {
+        this.isActive = false;
+        this.highlightColor = "#404BD9";
+        this.handleTextSelection = () => {
+            const selection = window.getSelection();
+            const selectedText = selection?.toString().trim();
+            if (selectedText && selectedText.length > 10) {
+                // Show quick action tooltip
+                this.showQuickActionTooltip(selectedText);
+            }
+        };
+        this.init();
+    }
+    async init() {
+        // Get extension settings
+        try {
+            const result = await chrome.storage.local.get(["settings"]);
+            const settings = result.settings || {};
+            if (settings.autoCapture) {
+                this.startAnalysis();
+            }
+        }
+        catch (error) {
+            console.error("Error initializing content script:", error);
+        }
+        // Listen for messages from background script
+        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            this.handleMessage(request, sender, sendResponse);
+            return true; // Keep message channel open
+        });
+        // Listen for keyboard shortcuts
+        document.addEventListener("keydown", (event) => {
+            if (event.altKey && event.key === "k") {
+                event.preventDefault();
+                this.toggleLearningMode();
+            }
+        });
+    }
+    handleMessage(request, sender, sendResponse) {
+        switch (request.type) {
+            case "ANALYZE_PAGE":
+                this.analyzePage().then(sendResponse);
+                break;
+            case "TOGGLE_LEARNING_MODE":
+                this.toggleLearningMode();
+                sendResponse({ success: true });
+                break;
+            case "CAPTURE_SELECTION":
+                this.captureSelection().then(sendResponse);
+                break;
+            default:
+                sendResponse({ error: "Unknown message type" });
+        }
+    }
+    async analyzePage() {
+        const pageData = {
+            title: document.title,
+            url: window.location.href,
+            content: this.extractTextContent(),
+            timestamp: Date.now(),
+        };
+        // Send page data to background script for processing
+        try {
+            await chrome.runtime.sendMessage({
+                type: "PAGE_ANALYZED",
+                data: pageData,
+            });
+        }
+        catch (error) {
+            console.error("Error sending page data:", error);
+        }
+        return pageData;
+    }
+    extractTextContent() {
+        // Extract meaningful text content from the page
+        const elementsToExtract = [
+            "p",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "li",
+            "article",
+            "section",
+        ];
+        const textContent = [];
+        elementsToExtract.forEach((tag) => {
+            const elements = document.querySelectorAll(tag);
+            elements.forEach((element) => {
+                const text = element.textContent?.trim();
+                if (text && text.length > 10) {
+                    textContent.push(text);
+                }
+            });
+        });
+        return textContent.join(" ").substring(0, 5000); // Limit to 5000 characters
+    }
+    async captureSelection() {
+        const selection = window.getSelection();
+        const selectedText = selection?.toString().trim();
+        if (!selectedText) {
+            return { text: "", success: false };
+        }
+        // Highlight the selected text
+        this.highlightSelectedText(selection);
+        // Save to storage
+        try {
+            const result = await chrome.storage.local.get(["highlights"]);
+            const highlights = result.highlights || [];
+            const newHighlight = {
+                id: Date.now().toString(),
+                text: selectedText,
+                url: window.location.href,
+                title: document.title,
+                timestamp: Date.now(),
+            };
+            highlights.push(newHighlight);
+            await chrome.storage.local.set({ highlights });
+            // Send to background for processing
+            chrome.runtime.sendMessage({
+                type: "TEXT_CAPTURED",
+                highlight: newHighlight,
+            });
+            return { text: selectedText, success: true };
+        }
+        catch (error) {
+            console.error("Error capturing selection:", error);
+            return { text: selectedText, success: false };
+        }
+    }
+    highlightSelectedText(selection) {
+        if (!selection || selection.rangeCount === 0)
+            return;
+        const range = selection.getRangeAt(0);
+        const highlight = document.createElement("span");
+        highlight.style.backgroundColor = this.highlightColor;
+        highlight.style.color = "white";
+        highlight.style.padding = "2px 4px";
+        highlight.style.borderRadius = "3px";
+        highlight.style.fontWeight = "bold";
+        highlight.className = "knowde-highlight";
+        try {
+            range.surroundContents(highlight);
+        }
+        catch (error) {
+            // Fallback for complex selections
+            console.log("Could not highlight complex selection");
+        }
+    }
+    toggleLearningMode() {
+        this.isActive = !this.isActive;
+        if (this.isActive) {
+            this.activateLearningMode();
+        }
+        else {
+            this.deactivateLearningMode();
+        }
+    }
+    activateLearningMode() {
+        // Add visual indicator that learning mode is active
+        const indicator = document.createElement("div");
+        indicator.id = "knowde-learning-indicator";
+        indicator.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #404BD9, #60C2DA);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(64, 75, 217, 0.3);
+      ">
+        🧠 Learning Mode Active
+      </div>
+    `;
+        document.body.appendChild(indicator);
+        // Enable text selection capturing
+        document.addEventListener("mouseup", this.handleTextSelection);
+    }
+    deactivateLearningMode() {
+        const indicator = document.getElementById("knowde-learning-indicator");
+        if (indicator) {
+            indicator.remove();
+        }
+        // Disable text selection capturing
+        document.removeEventListener("mouseup", this.handleTextSelection);
+    }
+    showQuickActionTooltip(text) {
+        // Remove existing tooltip
+        const existingTooltip = document.getElementById("knowde-tooltip");
+        if (existingTooltip) {
+            existingTooltip.remove();
+        }
+        const tooltip = document.createElement("div");
+        tooltip.id = "knowde-tooltip";
+        tooltip.innerHTML = `
+      <div style="
+        position: absolute;
+        background: white;
+        border: 1px solid #E5E3E6;
+        border-radius: 8px;
+        padding: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 10001;
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+      ">
+        <button id="knowde-learn-more" style="
+          background: #404BD9;
+          color: white;
+          border: none;
+          padding: 4px 8px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+        ">
+          Learn More 🧠
+        </button>
+      </div>
+    `;
+        // Position near the selection
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            tooltip.style.left = `${rect.left + window.scrollX}px`;
+            tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
+        }
+        document.body.appendChild(tooltip);
+        // Add click handler
+        const learnButton = document.getElementById("knowde-learn-more");
+        if (learnButton) {
+            learnButton.addEventListener("click", () => {
+                this.captureSelection();
+                tooltip.remove();
+            });
+        }
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (tooltip.parentNode) {
+                tooltip.remove();
+            }
+        }, 5000);
+    }
+    startAnalysis() {
+        // Start analyzing the page content
+        this.analyzePage();
+        // Set up periodic analysis for dynamic content
+        setInterval(() => {
+            if (this.isActive) {
+                this.analyzePage();
+            }
+        }, 30000); // Analyze every 30 seconds
+    }
+}
+// Initialize the content analyzer
+const knowdeAnalyzer = new KnowdeContentAnalyzer();
+// Export for potential use
+window.knowdeAnalyzer = knowdeAnalyzer;
+
+/******/ })()
+;
+//# sourceMappingURL=content.js.map

@@ -1,0 +1,64 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    @apply font-sans text-kn-text bg-kn-background antialiased;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-kn-primary text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:bg-opacity-90 hover:shadow-kn-lg transform hover:scale-105;
+  }
+
+  .btn-secondary {
+    @apply bg-kn-surface text-kn-primary border border-kn-border px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:bg-kn-primary hover:text-white;
+  }
+
+  .btn-ghost {
+    @apply text-kn-primary px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:bg-kn-surface;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 border border-kn-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-kn-primary focus:border-transparent transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-kn border border-kn-border p-6;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer;
+  }
+
+  .sidebar-item.active {
+    @apply bg-kn-primary text-white shadow-kn;
+  }
+
+  .sidebar-item:not(.active) {
+    @apply text-kn-text-secondary hover:bg-kn-surface hover:text-kn-text;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-kn-primary to-kn-accent bg-clip-text text-transparent;
+  }
+
+  .bg-gradient-primary {
+    @apply bg-gradient-to-r from-kn-primary to-kn-secondary;
+  }
+
+  .glass {
+    @apply bg-white bg-opacity-80 backdrop-blur-sm border border-white border-opacity-20;
+  }
+}

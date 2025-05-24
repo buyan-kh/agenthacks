@@ -1,1 +1,274 @@
-!function(){"use strict";chrome.runtime.onInstalled.addListener((()=>{console.log("Knowde extension installed"),chrome.storage.local.set({progress:{conceptsLearned:0,dailyGoal:10,currentStreak:0},settings:{autoCapture:!0,notifications:!0,learningMode:"adaptive"}})})),chrome.runtime.onMessage.addListener(((e,t,o)=>{if(console.log("Background received message:",e),"PROCESS_LEARNING_REQUEST"===e.type)return async function(){const e=["Great question! I'll create a personalized learning plan for you about this topic.","I understand you want to learn more about this. Let me break it down into manageable steps.","Excellent! I'll help you build a comprehensive understanding of this subject.","Perfect! Let me create a structured learning path that builds on your existing knowledge.","I see what you're interested in. I'll design a lesson plan that adapts to your learning style."],t=e[Math.floor(Math.random()*e.length)];await new Promise((e=>setTimeout(e,1e3+2e3*Math.random())));try{const e=(await chrome.storage.local.get(["progress"])).progress||{conceptsLearned:0,dailyGoal:10,currentStreak:0};e.conceptsLearned+=1,await chrome.storage.local.set({progress:e})}catch(e){console.error("Error updating progress:",e)}return{text:t,success:!0}}(e.text).then((e=>o(e))).catch((e=>{console.error("Error processing learning request:",e),o({text:"Sorry, I encountered an error processing your request.",success:!1})})),!0})),chrome.commands.onCommand.addListener((e=>{"toggle-learning"===e&&chrome.action.openPopup()})),chrome.tabs.onUpdated.addListener(((e,t,o)=>{"complete"===t.status&&o.url&&console.log("Page loaded:",o.url)}))}();
+/******/ (function() { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	// The require scope
+/******/ 	var __webpack_require__ = {};
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	!function() {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = function(exports, definition) {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	}();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	!function() {
+/******/ 		__webpack_require__.o = function(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop); }
+/******/ 	}();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	!function() {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = function(exports) {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	}();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+/*!**************************************!*\
+  !*** ./src/background/background.ts ***!
+  \**************************************/
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   generateLessonPlan: function() { return /* binding */ generateLessonPlan; },
+/* harmony export */   processLearningRequest: function() { return /* binding */ processLearningRequest; }
+/* harmony export */ });
+// Background script for Knowde extension
+// Handles communication between popup, content script, and external APIs
+// Initialize extension
+chrome.runtime.onInstalled.addListener(() => {
+    console.log("Knowde extension installed");
+    // Set default values
+    chrome.storage.local.set({
+        progress: {
+            conceptsLearned: 0,
+            dailyGoal: 10,
+            currentStreak: 0,
+        },
+        settings: {
+            autoCapture: true,
+            notifications: true,
+            learningMode: "adaptive",
+        },
+    });
+});
+// Handle messages from popup and content script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log("Background received message:", request);
+    if (request.type === "PROCESS_LEARNING_REQUEST") {
+        processLearningRequest(request.text)
+            .then((response) => sendResponse(response))
+            .catch((error) => {
+            console.error("Error processing learning request:", error);
+            sendResponse({
+                text: "Sorry, I encountered an error processing your request.",
+                success: false,
+            });
+        });
+        // Return true to indicate we'll send a response asynchronously
+        return true;
+    }
+    if (request.type === "GENERATE_LESSON_PLAN") {
+        generateLessonPlan(request.text)
+            .then((response) => sendResponse(response))
+            .catch((error) => {
+            console.error("Error generating lesson plan:", error);
+            sendResponse({
+                text: "Sorry, I encountered an error generating your lesson plan.",
+                success: false,
+            });
+        });
+        // Return true to indicate we'll send a response asynchronously
+        return true;
+    }
+});
+// Process learning requests and generate responses
+async function processLearningRequest(text) {
+    // For now, return a mock response
+    // In the future, this will integrate with AI APIs
+    const responses = [
+        "Great question! I'll create a personalized learning plan for you about this topic.",
+        "I understand you want to learn more about this. Let me break it down into manageable steps.",
+        "Excellent! I'll help you build a comprehensive understanding of this subject.",
+        "Perfect! Let me create a structured learning path that builds on your existing knowledge.",
+        "I see what you're interested in. I'll design a lesson plan that adapts to your learning style.",
+    ];
+    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 2000));
+    // Update progress
+    try {
+        const result = await chrome.storage.local.get(["progress"]);
+        const currentProgress = result.progress || {
+            conceptsLearned: 0,
+            dailyGoal: 10,
+            currentStreak: 0,
+        };
+        // Increment concepts learned
+        currentProgress.conceptsLearned += 1;
+        await chrome.storage.local.set({ progress: currentProgress });
+    }
+    catch (error) {
+        console.error("Error updating progress:", error);
+    }
+    return {
+        text: randomResponse,
+        success: true,
+    };
+}
+// Generate lesson plans based on user input
+async function generateLessonPlan(text) {
+    // Mock lesson plan generation
+    // In the future, this will integrate with AI APIs (OpenAI, Claude, etc.)
+    const topics = extractTopics(text);
+    const difficulty = determineDifficulty(text);
+    const estimatedTime = calculateEstimatedTime(topics.length, difficulty);
+    // Generate a mock lesson plan based on the input
+    const lessonPlan = {
+        title: generateTitle(text),
+        description: generateDescription(text),
+        difficulty: difficulty,
+        estimatedTime: estimatedTime,
+        topics: topics,
+    };
+    // Simulate AI processing time
+    await new Promise((resolve) => setTimeout(resolve, 2000 + Math.random() * 3000));
+    return {
+        text: `I've created a comprehensive lesson plan for "${lessonPlan.title}". This ${difficulty}-level course is estimated to take ${estimatedTime}.`,
+        lessonPlan: lessonPlan,
+        success: true,
+    };
+}
+// Helper functions for lesson plan generation
+function extractTopics(text) {
+    const keywords = [
+        "react",
+        "javascript",
+        "python",
+        "machine learning",
+        "css",
+        "html",
+        "algorithms",
+        "data structures",
+        "typescript",
+        "node.js",
+        "database",
+        "api",
+        "frontend",
+        "backend",
+        "ai",
+        "blockchain",
+        "cybersecurity",
+    ];
+    const foundTopics = keywords.filter((keyword) => text.toLowerCase().includes(keyword.toLowerCase()));
+    // If no specific topics found, generate generic ones based on text analysis
+    if (foundTopics.length === 0) {
+        return [
+            "Fundamentals",
+            "Core Concepts",
+            "Practical Applications",
+            "Best Practices",
+        ];
+    }
+    return foundTopics.length > 0 ? foundTopics.slice(0, 5) : ["General Topics"];
+}
+function determineDifficulty(text) {
+    const beginnerKeywords = [
+        "basic",
+        "intro",
+        "beginner",
+        "start",
+        "learn",
+        "fundamentals",
+    ];
+    const advancedKeywords = [
+        "advanced",
+        "expert",
+        "complex",
+        "deep dive",
+        "master",
+    ];
+    const lowerText = text.toLowerCase();
+    if (beginnerKeywords.some((keyword) => lowerText.includes(keyword))) {
+        return "beginner";
+    }
+    if (advancedKeywords.some((keyword) => lowerText.includes(keyword))) {
+        return "advanced";
+    }
+    return "intermediate";
+}
+function calculateEstimatedTime(topicCount, difficulty) {
+    const baseTime = difficulty === "beginner" ? 20 : difficulty === "intermediate" ? 30 : 45;
+    const totalMinutes = baseTime + topicCount * 10;
+    if (totalMinutes < 60) {
+        return `${totalMinutes} minutes`;
+    }
+    else {
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return minutes > 0
+            ? `${hours}h ${minutes}m`
+            : `${hours} hour${hours > 1 ? "s" : ""}`;
+    }
+}
+function generateTitle(text) {
+    // Extract main subject from user input
+    const commonPrefixes = [
+        "i want to learn",
+        "teach me",
+        "help me understand",
+        "learn about",
+    ];
+    let cleanText = text.toLowerCase();
+    commonPrefixes.forEach((prefix) => {
+        if (cleanText.startsWith(prefix)) {
+            cleanText = cleanText.replace(prefix, "").trim();
+        }
+    });
+    // Capitalize and format
+    return (cleanText
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
+        .replace(/([a-z])([A-Z])/g, "$1 $2") // Add spaces between camelCase
+        .substring(0, 50) + (cleanText.length > 50 ? "..." : ""));
+}
+function generateDescription(text) {
+    const templates = [
+        `A comprehensive learning path designed to help you master the concepts and practical applications.`,
+        `An interactive course that covers fundamental concepts, real-world examples, and hands-on practice.`,
+        `A structured approach to learning with clear explanations, examples, and progressive skill building.`,
+        `A personalized curriculum that adapts to your learning style and provides practical knowledge.`,
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+}
+// Handle keyboard shortcuts
+chrome.commands.onCommand.addListener((command) => {
+    if (command === "toggle-learning") {
+        // Toggle learning mode or open popup
+        chrome.action.openPopup();
+    }
+});
+// Monitor tab changes for learning opportunities
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === "complete" && tab.url) {
+        // Analyze page content for learning opportunities
+        // This will be implemented later with content script integration
+        console.log("Page loaded:", tab.url);
+    }
+});
+// Export for testing (if needed)
+
+
+/******/ })()
+;
+//# sourceMappingURL=background.js.map
