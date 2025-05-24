@@ -141,8 +141,8 @@ class Lesson(FirestoreModel):
     lesson_id: str = Field(..., description="Document ID")
     title: str
     objectives: List[str] = Field(min_length=1)
-    content: List[ContentBlock] = Field(min_length=1)
-    external_resources: List[ExternalResource] = Field(default_factory=list)
+    content: str
+    external_resources: List[str] = Field(min_length=1)
     order: int = Field(ge=0)
 
 
@@ -153,23 +153,23 @@ class LessonPlan(FirestoreModel):
     created_at: datetime = Field(default_factory=datetime.now)
     last_accessed: datetime = Field(default_factory=datetime.now)
     status: LessonPlanStatus = LessonPlanStatus.ACTIVE
-    goals: List[Goal] = Field(default_factory=list)
+    # goals: List[Goal] = Field(default_factory=list)
     source_prompt: str
 
     # Sub-collections (not included in Firestore document)
     lessons: List[Lesson] = Field(default_factory=list, exclude=True)
-    progress: List[Progress] = Field(default_factory=list, exclude=True)
+    # progress: List[Progress] = Field(default_factory=list, exclude=True)
 
     def get_lessons_dict(self) -> Dict[str, Dict[str, Any]]:
         """Get lessons as dictionary for Firestore subcollection."""
         return {lesson.lesson_id: lesson.to_firestore_dict() for lesson in self.lessons}
 
-    def get_progress_dict(self) -> Dict[str, Dict[str, Any]]:
-        """Get progress as dictionary for Firestore subcollection."""
-        return {
-            progress.lesson_id: progress.to_firestore_dict()
-            for progress in self.progress
-        }
+    # def get_progress_dict(self) -> Dict[str, Dict[str, Any]]:
+    #     """Get progress as dictionary for Firestore subcollection."""
+    #     return {
+    #         progress.lesson_id: progress.to_firestore_dict()
+    #         for progress in self.progress
+    #     }
 
 
 class UserFeedback(FirestoreModel):
@@ -334,3 +334,134 @@ class UserArtifact(FirestoreModel):
     def get_lesson_plan(self, plan_id: str) -> Optional[LessonPlan]:
         """Get a lesson plan by ID."""
         return next((lp for lp in self.lesson_plans if lp.plan_id == plan_id), None)
+
+
+def create_user_profile(
+    uid: str, email: str, display_name: str, **kwargs
+) -> UserProfile:
+    """Create a new user profile with validation."""
+    return UserProfile(uid=uid, email=email, display_name=display_name, **kwargs)
+
+
+def create_lesson_plan(
+    plan_id: str, title: str, description: str, source_prompt: str, **kwargs
+) -> LessonPlan:
+    """Create a new lesson plan with validation."""
+    return LessonPlan(
+        plan_id=plan_id,
+        title=title,
+        description=description,
+        source_prompt=source_prompt,
+        **kwargs,
+    )
+
+
+def create_knowledge_node(
+    concept_id: str, name: str, description: str, **kwargs
+) -> KnowledgeNode:
+    """Create a new knowledge graph node with validation."""
+    return KnowledgeNode(
+        concept_id=concept_id, name=name, description=description, **kwargs
+    )
+
+
+def create_reminder(
+    reminder_id: str, reminder_type: ReminderType, scheduled_time: datetime, **kwargs
+) -> Reminder:
+    """Create a new reminder with validation."""
+    return Reminder(
+        reminder_id=reminder_id,
+        type=reminder_type,
+        scheduled_time=scheduled_time,
+        **kwargs,
+    )
+
+
+# Example usage and testing:
+if __name__ == "__main__":
+    # Create a sample user profile with validation
+    try:
+        profile = create_user_profile(
+            uid="firebase_auth_uid_123",
+            email="user@example.com",
+            display_name="John Doe",
+        )
+        print("✓ User profile created successfully")
+    except Exception as e:
+        print(f"✗ User profile creation failed: {e}")
+
+    # Create a sample lesson plan
+    try:
+        lesson_plan = create_lesson_plan(
+            plan_id="lesson_plan_001",
+            title="Introduction to React Hooks",
+            description="Learn the fundamentals of React Hooks",
+            source_prompt="Teach me React Hooks from beginner to intermediate level",
+        )
+
+        # Add a sample lesson
+        lesson = Lesson(
+            lesson_id="lesson_001",
+            title="useState Hook",
+            objectives=["Understand state management", "Learn useState syntax"],
+            content=[
+                ContentBlock(
+                    type=ContentType.TEXT,
+                    value="useState is a React Hook that lets you add state to functional components.",
+                ),
+                ContentBlock(
+                    type=ContentType.QUIZ,
+                    questions=[
+                        {
+                            "question": "What does useState return?",
+                            "options": ["Array", "Object", "String"],
+                            "correct": 0,
+                        }
+                    ],
+                ),
+            ],
+            order=1,
+        )
+        lesson_plan.lessons.append(lesson)
+        print("✓ Lesson plan created successfully")
+    except Exception as e:
+        print(f"✗ Lesson plan creation failed: {e}")
+
+    # Create a user artifact
+    try:
+        user_artifact = UserArtifact(
+            app_id="my_learning_app",
+            user_id="user_123",
+            user_profile=profile,
+            lesson_plans=[lesson_plan],
+        )
+        print("✓ User artifact created successfully")
+    except Exception as e:
+        print(f"✗ User artifact creation failed: {e}")
+
+    # Demonstrate JSON serialization
+    print(f"\nCreated user artifact for {user_artifact.user_profile.display_name}")
+    print(f"Lesson plans: {len(user_artifact.lesson_plans)}")
+
+    # Example of converting to Firestore-compatible dictionary
+    print("\n--- User Profile Document ---")
+    print(json.dumps(user_artifact.get_user_profile_dict(), indent=2, default=str))
+
+    print("\n--- Lesson Plans Collection ---")
+    print(json.dumps(user_artifact.get_lesson_plans_dict(), indent=2, default=str))
+
+    # Test validation
+    print("\n--- Validation Tests ---")
+    try:
+        # This should fail - invalid email
+        UserProfile(uid="123", email="invalid-email", display_name="Test")
+    except Exception as e:
+        print(f"✓ Email validation works: {e}")
+
+    try:
+        # This should fail - mastery score out of range
+        KnowledgeNode(
+            concept_id="test", name="Test", description="Test", mastery_level=150
+        )
+    except Exception as e:
+        print(f"✓ Mastery level validation works: {e}")
