@@ -4,7 +4,13 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 from pydantic_core import from_json
 
-from data.model import KnowledgeGraph, LessonPlan, UserArtifact, UserProfile, Lesson
+from data.model import (
+    KnowledgeGraph,
+    LessonPlan,
+    UserArtifact,
+    UserProfile,
+    Lesson,
+)
 
 from dotenv import load_dotenv
 
@@ -97,19 +103,18 @@ def write_knowledge_graph(userId, nodes, edges):
     node_holder = graph_ref.document("nodeHolder").collection("nodes")
     edge_holder = graph_ref.document("edgeHolder").collection("edges")
     for node in nodes:
-        node_holder.document(node["concept_id"]).set(
+        node_holder.document(str(node["concept_id"])).set(
             {
                 "name": node["name"],
                 "description": node["description"],
                 "mastery_level": node["mastery_level"],
                 "last_reviewed": node["last_reviewed"],
                 "next_review": node["next_review"],
-                "repetition_interval": node["repetition_interval"],
                 "source_lesson_id": node["source_lesson_id"],
             }
         )
     for edge in edges:
-        edge_holder.document(edge["edge_id"]).set(
+        edge_holder.document(str(edge["edge_id"])).set(
             {
                 "source_concept_id": edge["source_concept_id"],
                 "target_concept_id": edge["target_concept_id"],
@@ -124,7 +129,7 @@ def get_knowledge_graph(userId):
     node_holder = graphref.document("nodeHolder").collection("nodes")
     edge_holder = graphref.document("edgeHolder").collection("edges")
     checkNode = node_holder.limit(1).get()
-    if not checkNode.exists:
+    if not checkNode:
         return None
     nodes = node_holder.stream()
     edges = edge_holder.stream()
