@@ -3,6 +3,7 @@ from agno.models.anthropic import Claude
 from agno.models.openai import OpenAIChat
 from agno.team.team import Team
 from agno.tools.googlesearch import GoogleSearchTools
+from agno.utils.pprint import pprint_run_response
 
 from data.utils import (
     get_knowledge_graph,
@@ -19,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv("./.env")
 
 content_generator_agent = Agent(
-    name="Generator Assistant",
+    name="Content Generator",
     role="Creates and refines learning materials and answers user questions",
     instructions=[
         "Parse the instruction for the user_id, source_prompt, and refined_instruction",
@@ -41,7 +42,8 @@ content_generator_agent = Agent(
     ],
     description="You generate comprehensive syllabi (lesson plans) from vague prompts",
     # response_model=LessonPlan,
-    use_json_mode=True,
+    # use_json_mode=True,
+    structured_outputs=True,
     add_datetime_to_instructions=True,
 )
 
@@ -55,8 +57,8 @@ research_agent = Agent(
     tools=[GoogleSearchTools()],
 )
 
-content_inputter_agent = Agent(
-    name="Data Inputter",
+content_writer_agent = Agent(
+    name="Data Writer",
     role="Input data into the database",
     instructions=[
         """ Ensure that the provided message follows this structure:\n
@@ -78,16 +80,16 @@ content_inputter_agent = Agent(
 content_generation_agent = Team(
     name="Content Generator Leader",
     mode="coordinate",
-    members=[content_generator_agent, research_agent, content_inputter_agent],
+    members=[content_generator_agent, research_agent, content_writer_agent],
     model=OpenAIChat(),
     instructions=[
-        """Whenever delegating a task to a member,
-        always include the original prompt and the user_id in this format:\n
+        """Ensure that the following information is included in the task description: \n
         source_prompt: 'original user prompt'\n
         user_id: 'user_id'\n
         refined instruction: 'your instruction'"""
         "Begin by generating a comprehensive learning plan based on the users knowledge history and learning pace",
-        "Delegate tasks to the generator assistant and data inputter to format and append the data to memory",
+        "Delegate tasks to the content generator and data writer to format and append the data to memory",
+        "insure that the data is formatted to JSON when provided to the data writer",
         "Ensure the data is inputted to the database using get_lesson_plan with user_id and plan_id",
         "If the data is not returned, then ask the inputter to try again",
         "return the plan_id alongside the generated plan message",
@@ -95,7 +97,7 @@ content_generation_agent = Team(
     tools=[get_lesson_plan],
     description="You generate comprehensive syllabi (lesson plans) from vague prompts",
     add_datetime_to_instructions=True,
-    add_member_tools_to_system_message=False,  # This can be tried to make the agent more consistently get the transfer tool call correct
+    add_member_tools_to_system_message=True,  # This can be tried to make the agent more consistently get the transfer tool call correct
     enable_agentic_context=True,  # Allow the agent to maintain a shared context and send that to members.
     share_member_interactions=True,  # Share all member responses with subsequent member requests.
     show_members_responses=True,
@@ -115,7 +117,6 @@ graph_generator_agent = Agent(
         'mastery_level': 'int between 0-100', \n
         'last_reviewed': 'datetime', \n
         'next_review': 'datetime', \n
-        'repetition_interval': 'int, default to 1, description=days until next review',
         'source_lesson_id': 'str'
         }
         """,
@@ -127,6 +128,8 @@ graph_generator_agent = Agent(
     """,
     ],
     tools=[get_lesson_plan],
+    structured_outputs=True,
+    use_json_mode=True,
     add_datetime_to_instructions=True,
 )
 
@@ -142,24 +145,20 @@ graph_writer_agent = Agent(
 )
 
 knowledge_graph_agent = Team(
-    name="Knowledge graph leader",
+    name="Knowledge Graph Leader",
     model=OpenAIChat(),
     members=[graph_generator_agent, graph_writer_agent],
     instructions=[
-        """Whenever delegating a task to a member,
-        always include the original prompt and the user_id in this format:\n
-        source_prompt: 'original user prompt'\n
-        user_id: 'user_id'\n
-        refined instruction: 'your instruction'"""
-        "Determine if the knowledge graph should be updated or generated from scratch",
-        "Delegate tasks to the graph generator and graph writer to format and append the data to memory",
+        "Determine if the knowledge graph should be updated or generated from scratch by using get_knowledge_graph with the user_id",
+        "Delegate tasks to the graph generator to format the data for the graph writer",
+        "then hand the graph writer the content alongside the user_id for appending to memory"
         "Ensure the data is inputted to the database using get_knowledge_graph with user_id",
         "If the data is not returned, then ask the inputter to try again",
         "return the plan_id alongside the generated plan message",
     ],
     tools=[get_knowledge_graph],
     add_datetime_to_instructions=True,
-    add_member_tools_to_system_message=False,  # This can be tried to make the agent more consistently get the transfer tool call correct
+    add_member_tools_to_system_message=True,  # This can be tried to make the agent more consistently get the transfer tool call correct
     enable_agentic_context=True,  # Allow the agent to maintain a shared context and send that to members.
     share_member_interactions=True,  # Share all member responses with subsequent member requests.
     show_members_responses=True,
@@ -177,11 +176,11 @@ leader = Team(
         always include the original prompt and the user_id in this format:\n
         source_prompt: 'original user prompt'\n
         user_id: 'user_id'\n
-        refined instruction: 'your instruction'"""
+        refined instruction: 'your instruction'""",
         "then ask the graph agent to generate a knowledge graph of the lesson plan",
     ],
     add_datetime_to_instructions=True,
-    add_member_tools_to_system_message=False,  # This can be tried to make the agent more consistently get the transfer tool call correct
+    add_member_tools_to_system_message=True,  # This can be tried to make the agent more consistently get the transfer tool call correct
     enable_agentic_context=True,  # Allow the agent to maintain a shared context and send that to members.
     share_member_interactions=True,  # Share all member responses with subsequent member requests.
     show_members_responses=True,
@@ -189,6 +188,11 @@ leader = Team(
     # use_json_mode=True,
 )
 
+# pprint_run_response(
+#     leader.run(
+#         "user_id: carl, prompt: 'I want to learn about linear algebra'", stream=True
+#     )
+# )
 leader.print_response(
-    "user_id: carl, prompt: 'I want to learn about linear algebra'", stream=True
+    "user_id=jack, prompt=I want to learn about linear algebra", stream=True
 )
